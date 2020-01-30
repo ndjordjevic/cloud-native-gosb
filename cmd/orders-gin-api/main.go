@@ -29,9 +29,21 @@ func main() {
 		v1.GET("/", getAllOrders)
 		v1.GET("/:id", getOrderById)
 		v1.POST("/", createOrder)
+		v1.DELETE("/:id", deleteOrder)
 	}
 
-	r.Run()
+	_ = r.Run()
+}
+
+func deleteOrder(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	delete(dataStore, id)
+
+	c.String(http.StatusOK, "Order is successfully deleted")
 }
 
 func createOrder(c *gin.Context) {
@@ -39,7 +51,9 @@ func createOrder(c *gin.Context) {
 
 	if err := c.BindJSON(&order); err == nil {
 		dataStore[order.ID] = order
+		c.String(http.StatusCreated, "Order is successfully created")
 	} else {
+		c.String(http.StatusInternalServerError, "Order couldn't be created")
 		log.Fatal(err)
 	}
 }
@@ -47,13 +61,13 @@ func createOrder(c *gin.Context) {
 func getOrderById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	order, ok := dataStore[id]
 	if ok {
 		c.JSON(http.StatusOK, order)
 	} else {
-		c.JSON(http.StatusNotFound, "Couldn't be found!")
+		c.String(http.StatusNotFound, "Couldn't be found!")
 	}
 }
 
