@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 )
 
@@ -31,9 +33,40 @@ func main() {
 		v1.POST("/", createOrder)
 		v1.PUT("/:id", updateOrder)
 		v1.DELETE("/:id", deleteOrder)
+		v1.PATCH("/:id", patchOrder)
 	}
 
 	_ = r.Run()
+}
+
+func patchOrder(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, err := c.GetRawData()
+	if err != nil {
+		panic(err)
+	}
+
+	mapBody := make(map[string]string)
+	if err = json.Unmarshal(data, &mapBody); err != nil {
+		panic(err)
+	}
+
+	orderToPatch := dataStore[id]
+	for k, v := range mapBody {
+		switch k {
+		case "volume":
+			volume, err := strconv.Atoi(v)
+			if err != nil {
+				panic(err)
+			}
+			reflect.ValueOf(&orderToPatch).Elem().FieldByName("Volume").SetInt(int64(volume))
+			dataStore[id] = orderToPatch
+		}
+	}
 }
 
 func updateOrder(c *gin.Context) {
