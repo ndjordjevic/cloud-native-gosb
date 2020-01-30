@@ -29,10 +29,27 @@ func main() {
 		v1.GET("/", getAllOrders)
 		v1.GET("/:id", getOrderById)
 		v1.POST("/", createOrder)
+		v1.PUT("/:id", updateOrder)
 		v1.DELETE("/:id", deleteOrder)
 	}
 
 	_ = r.Run()
+}
+
+func updateOrder(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var order Order
+	if err := c.BindJSON(&order); err == nil {
+		dataStore[id] = order
+		c.String(http.StatusOK, "Order is successfully updated")
+	} else {
+		c.String(http.StatusInternalServerError, "Order couldn't be updated")
+		log.Fatal(err)
+	}
 }
 
 func deleteOrder(c *gin.Context) {
