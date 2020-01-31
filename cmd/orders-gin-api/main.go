@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -24,7 +25,10 @@ var dataStore = map[int]Order{
 }
 
 func main() {
+	gin.ForceConsoleColor()
 	r := gin.Default()
+
+	r.Use(cors.Default())
 
 	v1 := r.Group("/v1/orders")
 	{
