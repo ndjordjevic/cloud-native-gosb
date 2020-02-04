@@ -10,6 +10,11 @@ import (
 	"strconv"
 )
 
+import "github.com/swaggo/gin-swagger" // gin-swagger middleware
+import "github.com/swaggo/files"       // swagger embed files
+
+import _ "github.com/ndjordjevic/cloud-native-gosb/cmd/orders-gin-api/docs"
+
 type Order struct {
 	ID         int     `json:"id"`
 	Account    string  `json:"account"`
@@ -24,6 +29,47 @@ var dataStore = map[int]Order{
 	3: {3, "acc", "Google", 7, 8},
 }
 
+// @title Orders Gin API
+// @version 1.0.0
+// @description This is a sample server for gin order CRUD ops
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /v1
+
+// @securityDefinitions.basic BasicAuth
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+
+// @securitydefinitions.oauth2.application OAuth2Application
+// @tokenUrl https://example.com/oauth/token
+// @scope.write Grants write access
+// @scope.admin Grants read and write access to administrative information
+
+// @securitydefinitions.oauth2.implicit OAuth2Implicit
+// @authorizationUrl https://example.com/oauth/authorize
+// @scope.write Grants write access
+// @scope.admin Grants read and write access to administrative information
+
+// @securitydefinitions.oauth2.password OAuth2Password
+// @tokenUrl https://example.com/oauth/token
+// @scope.read Grants read access
+// @scope.write Grants write access
+// @scope.admin Grants read and write access to administrative information
+
+// @securitydefinitions.oauth2.accessCode OAuth2AccessCode
+// @tokenUrl https://example.com/oauth/token
+// @authorizationUrl https://example.com/oauth/authorize
+// @scope.admin Grants read and write access to administrative information
 func main() {
 	gin.ForceConsoleColor()
 	r := gin.Default()
@@ -40,6 +86,8 @@ func main() {
 		v1.PATCH("/:id", patchOrder)
 	}
 
+	url := ginSwagger.URL("http://localhost:8080/swagger/doc.json")
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 	_ = r.Run()
 }
 
@@ -89,6 +137,15 @@ func updateOrder(c *gin.Context) {
 	}
 }
 
+// deleteOrder godoc
+// @Summary Delete order
+// @Description Delete by order ID
+// @Tags orders
+// @Accept  json
+// @Produce  json
+// @Param  id path int true "Order ID" Format(int64)
+// @Success 204 "Order is successfully deleted"
+// @Router /orders/{id} [delete]
 func deleteOrder(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -97,9 +154,18 @@ func deleteOrder(c *gin.Context) {
 
 	delete(dataStore, id)
 
-	c.String(http.StatusOK, "Order is successfully deleted")
+	c.String(http.StatusNoContent, "Order is successfully deleted")
 }
 
+// createOrder godoc
+// @Summary Create new order
+// @Description Create new order
+// @Tags orders
+// @Accept  json
+// @Produce  json
+// @Param account body Order true "New Order"
+// @Success 200 "Order is successfully created"
+// @Router /orders [post]
 func createOrder(c *gin.Context) {
 	var order Order
 
@@ -112,6 +178,15 @@ func createOrder(c *gin.Context) {
 	}
 }
 
+// getOrderById godoc
+// @Summary Get order by id
+// @Description Get order by id
+// @Tags orders
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Order ID"
+// @Success 200 {object} Order
+// @Router /orders/{id} [get]
 func getOrderById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -125,6 +200,14 @@ func getOrderById(c *gin.Context) {
 	}
 }
 
+// getAllOrders godoc
+// @Summary Get all orders
+// @Description Returns all orders
+// @Tags orders
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} Order
+// @Router /orders [get]
 func getAllOrders(c *gin.Context) {
 	values := make([]Order, 0, len(dataStore))
 
