@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -86,8 +87,13 @@ func main() {
 		v1.PATCH("/:id", patchOrder)
 	}
 
+	securityConfig := secure.DefaultConfig()
+	securityConfig.SSLRedirect = false
+	//r.Use(secure.New(securityConfig))
+
 	url := ginSwagger.URL("http://localhost:8080/swagger/doc.json")
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+	//_ = r.RunTLS(":8080", "cmd/orders-gin-api/domain.crt", "cmd/orders-gin-api/domain.key")
 	_ = r.Run()
 }
 
