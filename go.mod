@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/appleboy/gin-jwt/v2 v2.6.3
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/secure v0.0.0-20200205042520-5b0e7849db8f
 	github.com/gin-gonic/gin v1.5.0

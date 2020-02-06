@@ -2,19 +2,22 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/secure"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/secure"
+	"github.com/gin-gonic/gin"
+
+	"github.com/appleboy/gin-jwt/v2"
+
+	_ "github.com/ndjordjevic/cloud-native-gosb/cmd/orders-gin-api/docs"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
 )
-
-import "github.com/swaggo/gin-swagger" // gin-swagger middleware
-import "github.com/swaggo/files"       // swagger embed files
-
-import _ "github.com/ndjordjevic/cloud-native-gosb/cmd/orders-gin-api/docs"
 
 type Order struct {
 	ID         int     `json:"id"`
@@ -28,6 +31,19 @@ var dataStore = map[int]Order{
 	1: {1, "acc", "BMW", 10, 5},
 	2: {2, "acc", "Apple", 12, 6},
 	3: {3, "acc", "Google", 7, 8},
+}
+
+type login struct {
+	Username string `form:"username" json:"username" binding:"required"`
+	Password string `form:"password" json:"password" binding:"required"`
+}
+
+var identityKey = "id"
+
+type User struct {
+	UserName  string
+	FirstName string
+	LastName  string
 }
 
 // @title Orders Gin API
@@ -77,7 +93,84 @@ func main() {
 
 	r.Use(cors.Default())
 
+	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
+		Realm:       "test zone",
+		Key:         []byte("secret key"),
+		Timeout:     time.Hour,
+		MaxRefresh:  time.Hour,
+		IdentityKey: identityKey,
+		PayloadFunc: func(data interface{}) jwt.MapClaims {
+			if v, ok := data.(*User); ok {
+				return jwt.MapClaims{
+					identityKey: v.UserName,
+				}
+			}
+			return jwt.MapClaims{}
+		},
+		IdentityHandler: func(c *gin.Context) interface{} {
+			claims := jwt.ExtractClaims(c)
+			return &User{
+				UserName: claims[identityKey].(string),
+			}
+		},
+		Authenticator: func(c *gin.Context) (interface{}, error) {
+			var loginVals login
+			if err := c.ShouldBind(&loginVals); err != nil {
+				return "", jwt.ErrMissingLoginValues
+			}
+			userID := loginVals.Username
+			password := loginVals.Password
+
+			if (userID == "admin" && password == "admin") || (userID == "test" && password == "test") {
+				return &User{
+					UserName:  userID,
+					LastName:  "Bo-Yi",
+					FirstName: "Wu",
+				}, nil
+			}
+
+			return nil, jwt.ErrFailedAuthentication
+		},
+		Authorizator: func(data interface{}, c *gin.Context) bool {
+			if v, ok := data.(*User); ok && v.UserName == "admin" {
+				return true
+			}
+
+			return false
+		},
+		Unauthorized: func(c *gin.Context, code int, message string) {
+			c.JSON(code, gin.H{
+				"code":    code,
+				"message": message,
+			})
+		},
+		// TokenLookup is a string in the form of "<source>:<name>" that is used
+		// to extract token from the request.
+		// Optional. Default value "header:Authorization".
+		// Possible values:
+		// - "header:<name>"
+		// - "query:<name>"
+		// - "cookie:<name>"
+		// - "param:<name>"
+		TokenLookup: "header: Authorization, query: token, cookie: jwt",
+		// TokenLookup: "query:token",
+		// TokenLookup: "cookie:token",
+
+		// TokenHeadName is a string in the header. Default value is "Bearer"
+		TokenHeadName: "Bearer",
+
+		// TimeFunc provides the current time. You can override it to use another time value. This is useful for testing or if your server uses a different time zone than your tokens.
+		TimeFunc: time.Now,
+	})
+
+	if err != nil {
+		log.Fatal("JWT Error:" + err.Error())
+	}
+
+	r.POST("/login", authMiddleware.LoginHandler)
+
 	v1 := r.Group("/v1/orders")
+	v1.Use(authMiddleware.MiddlewareFunc())
 	{
 		v1.GET("/", getAllOrders)
 		v1.GET("/:id", getOrderById)
@@ -93,6 +186,7 @@ func main() {
 
 	url := ginSwagger.URL("http://localhost:8080/swagger/doc.json")
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+
 	//_ = r.RunTLS(":8080", "cmd/orders-gin-api/domain.crt", "cmd/orders-gin-api/domain.key")
 	_ = r.Run()
 }
