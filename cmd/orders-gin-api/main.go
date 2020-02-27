@@ -27,7 +27,7 @@ type Order struct {
 	Price      float32 `json:"price"`
 }
 
-var dataStore = map[int]Order{
+var dataStore = map[int]*Order{
 	1: {1, "acc", "BMW", 10, 5},
 	2: {2, "acc", "Apple", 12, 6},
 	3: {3, "acc", "Google", 7, 8},
@@ -229,7 +229,7 @@ func updateOrder(c *gin.Context) {
 
 	var order Order
 	if err := c.BindJSON(&order); err == nil {
-		dataStore[id] = order
+		dataStore[id] = &order
 		c.String(http.StatusOK, "Order is successfully updated")
 	} else {
 		c.String(http.StatusInternalServerError, "Order couldn't be updated")
@@ -270,7 +270,7 @@ func createOrder(c *gin.Context) {
 	var order Order
 
 	if err := c.BindJSON(&order); err == nil {
-		dataStore[order.ID] = order
+		dataStore[order.ID] = &order
 		c.String(http.StatusCreated, "Order is successfully created")
 	} else {
 		c.String(http.StatusInternalServerError, "Order couldn't be created")
@@ -312,7 +312,7 @@ func getAllOrders(c *gin.Context) {
 	values := make([]Order, 0, len(dataStore))
 
 	for _, v := range dataStore {
-		values = append(values, v)
+		values = append(values, *v)
 	}
 	c.JSON(http.StatusOK, values)
 }
